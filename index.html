@@ -1,0 +1,38 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Smart Notes App</title>
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+  <div class="container">
+    <h1>📝 Smart Notes App</h1>
+
+    <form id="noteForm">
+      <input type="text" id="noteTitle" placeholder="Note title" required />
+      <textarea id="noteBody" placeholder="Write your note here..." required></textarea>
+      <select id="noteCategory">
+        <option value="Study">Study</option>
+        <option value="Work">Work</option>
+        <option value="Personal">Personal</option>
+      </select>
+      <button type="submit">Add Note</button>
+    </form>
+
+    <input type="text" id="searchInput" placeholder="Search notes..." />
+
+    <select id="categoryFilter">
+      <option value="All">All</option>
+      <option value="Study">Study</option>
+      <option value="Work">Work</option>
+      <option value="Personal">Personal</option>
+    </select>
+
+    <div id="notesContainer"></div>
+  </div>
+
+  <script src="script.js"></script>
+</body>
+</html>
