@@ -1,90 +1,156 @@
-document.addEventListener("DOMContentLoaded", function () {
-  let notes = JSON.parse(localStorage.getItem("notes")) || [];
-  let editingIndex = null;
+// Elements
+const noteForm = document.getElementById('noteForm');
+const noteTitle = document.getElementById('noteTitle');
+const noteBody = document.getElementById('noteBody');
+const noteCategory = document.getElementById('noteCategory');
+const notesContainer = document.getElementById('notesContainer');
+const searchInput = document.getElementById('searchInput');
+const categoryFilter = document.getElementById('categoryFilter');
 
-  const noteForm = document.getElementById("noteForm");
-  const notesContainer = document.getElementById("notesContainer");
-  const categoryFilter = document.getElementById("categoryFilter");
-  const searchInput = document.getElementById("searchInput");
+// Load notes
+let notes = JSON.parse(localStorage.getItem('notes')) || [];
+displayNotes(notes);
 
-  function saveNotes() {
-    localStorage.setItem("notes", JSON.stringify(notes));
-  }
+// Notifications
+Notification.requestPermission();
 
-  function renderNotes() {
-    notesContainer.innerHTML = "";
-    const searchTerm = searchInput.value.toLowerCase();
-    const selectedCategory = categoryFilter.value;
+// Form Submit
+noteForm.addEventListener('submit', (e) => {
+  e.preventDefault();
+  const title = noteTitle.value.trim();
+  const body = noteBody.value.trim();
+  const category = noteCategory.value;
+  const createdAt = new Date().toLocaleString();
+  const reminder = document.getElementById('reminderDate')?.value;
 
-    const filteredNotes = notes.filter((note) => {
-      const matchesCategory = selectedCategory === "All" || note.category === selectedCategory;
-      const matchesSearch =
-        note.title.toLowerCase().includes(searchTerm) ||
-        note.body.toLowerCase().includes(searchTerm);
-      return matchesCategory && matchesSearch;
-    });
-
-    filteredNotes.forEach((note, index) => {
-      const noteCard = document.createElement("div");
-      noteCard.className = "note-card";
-
-      noteCard.innerHTML = `
-        <h3>${note.title}</h3>
-        <p>${note.body}</p>
-        <small>📌 ${note.category}</small><br/>
-        <small>🕒 Created: ${note.timestamp}</small><br/>
-        <button onclick="editNote(${index})" class="edit-btn">Edit</button>
-        <button onclick="deleteNote(${index})" class="delete-btn">Delete</button>
-      `;
-
-      notesContainer.appendChild(noteCard);
-    });
-  }
-
-  window.deleteNote = function (index) {
-    notes.splice(index, 1);
-    saveNotes();
-    renderNotes();
-  };
-
-  window.editNote = function (index) {
-    const note = notes[index];
-    document.getElementById("noteTitle").value = note.title;
-    document.getElementById("noteBody").value = note.body;
-    document.getElementById("noteCategory").value = note.category;
-    editingIndex = index;
-  };
-
-  noteForm.addEventListener("submit", function (e) {
-    e.preventDefault();
-
-    const title = document.getElementById("noteTitle").value.trim();
-    const body = document.getElementById("noteBody").value.trim();
-    const category = document.getElementById("noteCategory").value;
-
-    if (!title || !body) {
-      alert("Please fill in both the title and note description.");
-      return;
-    }
-
-    const timestamp = new Date().toLocaleString();
-
-    if (editingIndex !== null) {
-      // Editing existing note
-      notes[editingIndex] = { title, body, category, timestamp };
-      editingIndex = null;
-    } else {
-      // Creating new note
-      notes.push({ title, body, category, timestamp });
-    }
-
-    saveNotes();
-    renderNotes();
+  if (title && body) {
+    const note = {
+      id: Date.now(),
+      title,
+      body,
+      category,
+      createdAt,
+      reminder
+    };
+    notes.push(note);
+    localStorage.setItem('notes', JSON.stringify(notes));
+    displayNotes(notes);
     noteForm.reset();
-  });
-
-  categoryFilter.addEventListener("change", renderNotes);
-  searchInput.addEventListener("input", renderNotes);
-
-  renderNotes();
+  }
 });
+
+// Display Notes
+function displayNotes(filteredNotes) {
+  notesContainer.innerHTML = '';
+  filteredNotes.forEach(note => {
+    const noteDiv = document.createElement('div');
+    noteDiv.classList.add('note');
+
+    noteDiv.innerHTML = `
+      <h3>${note.title}</h3>
+      <p>${note.body}</p>
+      <small><strong>Category:</strong> ${note.category}</small><br>
+      <small><strong>Created:</strong> ${note.createdAt}</small><br>
+      ${note.reminder ? `<small><strong>Reminder:</strong> ${note.reminder}</small><br>` : ''}
+      <button onclick="editNote(${note.id})">✏️ Edit</button>
+      <button onclick="deleteNote(${note.id})">🗑 Delete</button>
+    `;
+
+    notesContainer.appendChild(noteDiv);
+  });
+}
+
+// Edit Note
+function editNote(id) {
+  const note = notes.find(n => n.id === id);
+  if (note) {
+    noteTitle.value = note.title;
+    noteBody.value = note.body;
+    noteCategory.value = note.category;
+
+    // Optional: Handle reminder edit
+    const reminderInput = document.getElementById('reminderDate');
+    if (reminderInput && note.reminder) {
+      reminderInput.value = note.reminder;
+    }
+
+    notes = notes.filter(n => n.id !== id);
+    localStorage.setItem('notes', JSON.stringify(notes));
+    displayNotes(notes);
+  }
+}
+
+// Delete Note
+function deleteNote(id) {
+  notes = notes.filter(n => n.id !== id);
+  localStorage.setItem('notes', JSON.stringify(notes));
+  displayNotes(notes);
+}
+
+// Search Notes
+searchInput.addEventListener('input', () => {
+  const query = searchInput.value.toLowerCase();
+  const filtered = notes.filter(n =>
+    n.title.toLowerCase().includes(query) ||
+    n.body.toLowerCase().includes(query)
+  );
+  displayNotes(filtered);
+});
+
+// Filter Category
+categoryFilter.addEventListener('change', () => {
+  const category = categoryFilter.value;
+  const filtered = category === 'All' ? notes : notes.filter(n => n.category === category);
+  displayNotes(filtered);
+});
+
+// Reminder Notification Check
+setInterval(() => {
+  const now = new Date();
+  notes.forEach(note => {
+    if (note.reminder) {
+      const reminderTime = new Date(note.reminder);
+      const diff = reminderTime - now;
+      if (diff > 0 && diff < 60000) {
+        if (Notification.permission === 'granted') {
+          new Notification("🔔 Reminder", {
+            body: `Note: ${note.title}`,
+          });
+        }
+      }
+    }
+  });
+}, 30000); // Every 30 seconds
+
+// PWA Service Worker Registration
+if ('serviceWorker' in navigator) {
+  window.addEventListener('load', () => {
+    navigator.serviceWorker.register('service-worker.js')
+      .then(reg => console.log('Service Worker Registered', reg))
+      .catch(err => console.error('Service Worker Registration Failed', err));
+  });
+}
+
+// Install App
+let deferredPrompt;
+const installBtn = document.getElementById('installBtn');
+
+window.addEventListener('beforeinstallprompt', (e) => {
+  e.preventDefault();
+  deferredPrompt = e;
+  installBtn.style.display = 'block';
+});
+
+installBtn.addEventListener('click', async () => {
+  if (deferredPrompt) {
+    deferredPrompt.prompt();
+    const { outcome } = await deferredPrompt.userChoice;
+    console.log(`User response: ${outcome}`);
+    if (outcome === 'accepted') {
+      installBtn.style.display = 'none';
+    }
+    deferredPrompt = null;
+  }
+});
+
+
